@@ -1,0 +1,209 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>비트모빅 TCG v58</title>
+<style>
+  :root { --gap:24px; --side:260px; }
+  body{margin:0;background:#111;color:#fff;font-family:Arial,sans-serif;}
+
+  /* Header */
+  #headerRow{display:flex;justify-content:center;align-items:center;gap:20px;margin:40px auto;}
+  #headerRow h1{margin:0;font-size:3em;}
+  #startBtn{padding:10px 24px;font-size:18px;border:none;border-radius:6px;background:#00ffd9;color:#000;font-weight:bold;cursor:pointer;}
+
+  /* Cards */
+  .cardsRow{display:flex;justify-content:center;gap:12px;margin-bottom:var(--gap);flex-wrap:wrap;}
+  .card{border:2px solid #fff;border-radius:10px;width:140px;height:108px;display:flex;flex-direction:column;justify-content:center;align-items:center;background:#222;font-weight:bold;text-align:center;user-select:none;overflow:hidden;}
+  .card.img{width:180px;height:260px;}
+  .card img{width:100%;height:100%;object-fit:cover;}
+  .used{filter:brightness(.3);} .placeholder{color:#777;border-style:dashed;}
+  .card-ancient{border-color:#FF4444;color:#FF4444;}
+  .card-legendary{border-color:#FFD700;color:#FFD700;}
+  .card-epic{border-color:#9932CC;color:#9932CC;}
+  .card-rare{border-color:#87CEFA;color:#87CEFA;}
+  .card-common{border-color:#B0B0B0;color:#B0B0B0;}
+
+  /* Middle section */
+  #middleRow{display:flex;flex-wrap:wrap;gap:var(--gap);justify-content:center;margin-bottom:var(--gap);align-items:flex-start;}
+  #logContainer,#chartContainer{width:var(--side);}
+  #roundLogTitle,#chartTitle{text-align:center;margin:0 0 8px;font-size:1.2em;}
+  #roundLogTitle{color:#00ffd9;} #chartTitle{color:#FFD700;}
+  #logPanel{background:#1a1a1a;border:2px solid #444;border-radius:8px;padding:16px;font-size:.95em;max-height:500px;overflow-y:auto;}
+  #roundLog{list-style:none;margin:0;padding:0;} #roundLog li{margin-bottom:6px;line-height:1.4;}
+  #chart-img{width:100%;height:auto;border:2px solid #555;border-radius:8px;}
+
+  /* Battle box */
+  .battle-box{flex:1 1 400px;width:100%;max-width:1000px;height:360px;border:3px solid #444;border-radius:12px;background:#1b1b1b;display:flex;justify-content:center;align-items:center;position:relative;}
+  .battle-row{display:flex;gap:60px;flex-wrap:wrap;align-items:center;justify-content:center;}
+  .battle-result-center{font-size:2em;font-weight:bold;color:gold;min-width:160px;text-align:center;}
+  .final-result-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);display:flex;justify-content:center;align-items:center;border-radius:12px;z-index:10;}
+  .final-result-overlay h2{font-size:2.2em;color:#00ffd9;margin:0;text-shadow:0 0 10px #00ffd9;}
+  #chartLegend{
+  margin:8px 0 0;      /* 이미지와 살짝 간격 */
+  padding:0;
+  text-align:center;
+  font-size:1.2em;
+  line-height:1.4;
+}
+#chartLegend div{margin:2px 0;}
+#chartLegend .win{color:#FFD700;} /* 노란색 강조 */
+
+
+  /* Desktop order */
+  @media(min-width:901px){
+    #logContainer{order:1;}
+    .battle-box{order:2;}
+    #chartContainer{order:3;}
+  }
+
+  /* Tablet */
+  @media(max-width:900px){
+    #middleRow{flex-direction:column;align-items:center;}
+    #logContainer,#chartContainer{width:90%;}
+  }
+
+  /* Mobile */
+  @media(max-width:600px){
+    :root{--gap:16px;}
+    .card{width:70px;height:74px;font-size:.8em;}
+    .card.img{width:70px;height:171px;}
+    .battle-box{height:260px;padding:8px;}
+    .battle-row{gap:24px;}
+    #headerRow{flex-direction:column;gap:12px;margin:24px auto;}
+    #headerRow h1{font-size:2.2em;}
+    #startBtn{font-size:16px;padding:8px 20px;}
+  }
+  #playerSection{
+  margin-top:-100px;       /* ← 간격 조정은 여기서 (숫자만 바꿔가며 미세 조정) */
+  text-align:center;      /* 제목 <h3> 가운데 정렬 */
+}
+
+
+</style>
+</head>
+<body>
+<div id="headerRow"><h1>비트모빅 TCG</h1><button id="startBtn">게임 시작</button></div>
+
+<h3 style="text-align:center;margin:0 0 6px;">컴퓨터</h3>
+<div class="cardsRow" id="computerZone"></div>
+
+<div id="middleRow">
+  <div id="logContainer">
+    <h3 id="roundLogTitle">라운드 로그</h3>
+    <aside id="logPanel"><ul id="roundLog"></ul></aside>
+  </div>
+
+  <div class="battle-box" id="battleZone"><em style="color:gray;">전투 결과가 여기에 표시됩니다</em></div>
+
+  <div id="chartContainer">
+    <h3 id="chartTitle">오행 상성표</h3>
+    <img id="chart-img" src="img/element_chart.png" alt="오행 상성표">
+    <div id="chartLegend">
+      <div><span class="win">🔥 Fire</span> &gt; Metal</div>
+      <div><span class="win">⚔️ Metal</span> &gt; Wood</div>
+      <div><span class="win">🌳 Wood</span> &gt; Earth</div>
+      <div><span class="win">🧱 Earth</span> &gt; Water</div>
+      <div><span class="win">💧 Water</span> &gt; Fire</div>
+    </div>
+    
+  </div>
+</div>
+
+<div id="playerSection">
+  <h3>플레이어</h3>
+  <div class="cardsRow" id="playerZone"></div>
+</div>
+
+<script>
+const grades=['Ancient','Legendary','Epic','Rare','Common'];
+const elements=['Wood','Fire','Earth','Metal','Water'];
+const beats={Wood:'Earth',Earth:'Water',Water:'Fire',Fire:'Metal',Metal:'Wood'};
+const emo={Wood:'🌳',Fire:'🔥',Earth:'🧱',Metal:'⚔️',Water:'💧'};
+
+const computerZone=document.getElementById('computerZone');
+const playerZone=document.getElementById('playerZone');
+const roundLog=document.getElementById('roundLog');
+const battleZone=document.getElementById('battleZone');
+const startBtn=document.getElementById('startBtn');
+
+let playerDeck=[],cpuDeck=[],pWin=0,cWin=0,round=1,rollover=1;
+
+const rand=()=>elements[Math.floor(Math.random()*elements.length)];
+const imgPath=c=>`img/${c.grade.toLowerCase()}_${c.element.toLowerCase()}.png`;
+
+function createDeck(){return [...grades].reverse().map(g=>({grade:g,element:rand(),used:false}));}
+
+function cardHTML(card,dim=true,idx=null){
+  const used=(dim&&card.used)?' used':'';
+  const click=idx!==null?` onclick="selectCard(${idx})"`:'';
+  return `<div class="card card-${card.grade.toLowerCase()} img${used}"${click}>
+            <img src="${imgPath(card)}" alt="${card.grade}"
+                 onerror="(function(el){const p=el.parentNode;p.classList.remove('img');p.innerHTML='<strong>${card.grade}</strong><br>${card.element} ${emo[card.element]}';})(this)">
+          </div>`;
+}
+
+function render(){
+  computerZone.innerHTML=cpuDeck.map(c=>cardHTML(c,true)).join('');
+  playerZone.innerHTML=playerDeck.map((c,i)=>cardHTML(c,true,c.used?null:i)).join('');
+}
+
+function compare(a,b){
+  const ai=grades.indexOf(a.grade),bi=grades.indexOf(b.grade);
+  if(a.element===b.element) return ai<bi?'A':ai>bi?'B':'Draw';
+  const aB=beats[a.element]===b.element,bB=beats[b.element]===a.element,d=Math.abs(ai-bi);
+  if(aB||bB){if(d>=3) return ai<bi?'A':'B'; return aB?'A':'B';}
+  return ai<bi?'A':ai>bi?'B':'Draw';
+}
+
+function log(t){roundLog.insertAdjacentHTML('beforeend',`<li>${t}</li>`);}
+
+function showBattle(p,c,t){
+  battleZone.innerHTML=`<div class="battle-row">${cardHTML(p,false)}<div class="battle-result-center">⚔️ ${t} ⚔️</div>${cardHTML(c,false)}</div>`;
+}
+
+function showFinal(){
+  const r=pWin>cWin?'🎉 플레이어 승리!':pWin<cWin?'💀 컴퓨터 승리!':'🤝 무승부!';
+  log('――――――――――――'); log('최종 결과 : '+r);
+  battleZone.insertAdjacentHTML('beforeend',`<div class="final-result-overlay"><h2>${r}</h2></div>`);
+}
+
+function selectCPUCard(){
+  const avail=cpuDeck.filter(v=>!v.used);
+  return avail[Math.floor(Math.random()*avail.length)];
+}
+
+function selectCard(i){
+  const p=playerDeck[i]; if(p.used) return;
+  const c=selectCPUCard(); p.used=c.used=true;
+  const r=compare(p,c);
+  let txt=r==='A'?'플레이어 승':r==='B'?'컴퓨터 승':'무승부';
+  if(r==='Draw') rollover++;
+  else{ if(r==='A') pWin+=rollover; if(r==='B') cWin+=rollover;
+        if(rollover>1) txt+=` (${rollover}점)`; rollover=1; }
+  showBattle(p,c,txt); log(`${round}라운드 : ${txt}`); round++;
+  setTimeout(()=>{render(); if(round>5||pWin>=3||cWin>=3) showFinal();},700);
+}
+
+function placeholders(){
+  const ph='<div class="card placeholder">CARD</div>'.repeat(5);
+  computerZone.innerHTML=ph; playerZone.innerHTML=ph;
+}
+
+function startGame(){
+  playerDeck=createDeck(); cpuDeck=createDeck();
+  pWin=cWin=0; round=1; rollover=1;
+  roundLog.innerHTML='';
+  battleZone.innerHTML='<em style="color:gray;">전투 결과가 여기에 표시됩니다</em>';
+  render();
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  placeholders();
+  startBtn.addEventListener('click',startGame);
+});
+</script>
+</body>
+</html>
