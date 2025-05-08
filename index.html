@@ -2,14 +2,12 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <script>
-      if (window.innerWidth <= 900) {
-        window.location.href = "/BTCMobickTCG/mobile.html";
-      }
-    </script>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>비트모빅 TCG</title>  
+  <script>
+    const isMobile = /Mobi|Android|iPhone|iPad|Galaxy|Fold/i.test(navigator.userAgent);
+    if (isMobile) {
+      window.location.href = "/BTCMobickTCG/mobile.html";
+    }
+  </script>  
   
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
