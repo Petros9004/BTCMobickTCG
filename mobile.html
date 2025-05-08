@@ -1,0 +1,227 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <script>
+    if (window.innerWidth <= 900) {
+      window.location.href = "mobile.html";
+    }
+  </script>  
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>비트모빅 TCG - 모바일</title>
+  <style>
+    body { margin:0; background:#111; color:#fff; font-family:Arial,sans-serif; }
+    h1, h3 { margin:0; text-align:center; }
+    #headerRow { display:flex; flex-direction:column; align-items:center; gap:8px; padding:20px 0; }
+    #startBtn { padding:8px 20px; font-size:16px; border:none; border-radius:6px; background:#00ffd9; color:#000; font-weight:bold; cursor:pointer; }
+
+    .cardsRow { display:flex; justify-content:center; gap:10px; flex-wrap:wrap; padding:10px 0; }
+    .card { border:2px solid #fff; border-radius:10px; width:70px; height:74px; font-size:.8em; background:#222; color:#fff; display:flex; justify-content:center; align-items:center; text-align:center; user-select:none; overflow:hidden; }
+    .card.img { width:90px; height:171px; }
+    .card img { width:100%; height:100%; object-fit:cover; }
+    .used { filter:brightness(.3); }
+    .placeholder { color:#777; border-style:dashed; }
+
+    .card-ancient{border-color:#FF4444;color:#FF4444;}
+    .card-legendary{border-color:#FFD700;color:#FFD700;}
+    .card-epic{border-color:#9932CC;color:#9932CC;}
+    .card-rare{border-color:#87CEFA;color:#87CEFA;}
+    .card-common{border-color:#B0B0B0;color:#B0B0B0;}
+
+    .battle-box { height:180px; border:3px solid #444; border-radius:12px; background:#1b1b1b; display:flex; justify-content:center; align-items:center; position:relative; margin:10px; padding:6px; overflow:hidden; }
+    .battle-row { display:flex; gap:12px; justify-content:center; align-items:center; }
+    .battle-result-center { font-size:1.4em; font-weight:bold; color:gold; text-align:center; min-width:80px; }
+
+    .final-result-overlay {
+      position:absolute;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      background:rgba(0,0,0,0.8);
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      z-index:5;
+    }
+
+    .final-result-box {
+      background: #00ffd9;
+      color: #000;
+      font-weight: bold;
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-size: 1.4em;
+      text-align: center;
+      box-shadow: 0 0 12px 3px #00ffd9;
+    }
+
+    #logContainer {
+      background:#1a1a1a;
+      border:2px solid #444;
+      border-radius:8px;
+      margin:10px;
+      max-height:300px;
+      overflow-y:auto;
+      padding:12px;
+      text-align: center;
+    }
+
+    #roundLog {
+      list-style:none;
+      padding:0;
+      margin:10px 0;
+      font-size:.9em;
+      line-height:1.4;
+    }
+
+    #chartContainer { display:flex; align-items:center; justify-content:center; gap:12px; padding:12px; }
+    #chart-img { width:135px; height:auto; border:2px solid #555; border-radius:8px; }
+    #chartLegend { font-size:.95em; text-align:left; }
+    #chartLegend div { margin:2px 0; }
+    #chartLegend .win { color:#FFD700; }
+  </style>
+</head>
+<body>
+  <audio id="sfx-select" src="sounds/select.mp3" preload="auto"></audio>
+<audio id="sfx-win" src="sounds/win.mp3" preload="auto"></audio>
+<audio id="sfx-lose" src="sounds/lose.mp3" preload="auto"></audio>
+<audio id="sfx-draw" src="sounds/draw.mp3" preload="auto"></audio>
+
+  <div id="headerRow">
+    <h1>비트모빅 TCG</h1>
+    <button id="startBtn">게임 시작</button>
+  </div>
+
+  <h3>컴퓨터</h3>
+  <div class="cardsRow" id="computerZone"></div>
+
+  <div class="battle-box" id="battleZone">
+    <em style="color:gray;">전투 결과가 여기에 표시됩니다</em>
+  </div>
+
+  <h3>플레이어</h3>
+  <div class="cardsRow" id="playerZone"></div>
+
+  <div id="logContainer">
+    <h3>라운드 로그</h3>
+    <ul id="roundLog"></ul>
+  </div>
+
+  <div id="chartContainer">
+    <img id="chart-img" src="img/element_chart.png" alt="오행 상성표">
+    <div id="chartLegend">
+      <div><span class="win">🔥 Fire</span> &gt; Metal</div>
+      <div><span class="win">⚔️ Metal</span> &gt; Wood</div>
+      <div><span class="win">🌳 Wood</span> &gt; Earth</div>
+      <div><span class="win">🧱 Earth</span> &gt; Water</div>
+      <div><span class="win">💧 Water</span> &gt; Fire</div>
+    </div>
+  </div>
+
+  <script>
+    const grades=['Ancient','Legendary','Epic','Rare','Common'];
+    const elements=['Wood','Fire','Earth','Metal','Water'];
+    const beats={Wood:'Earth',Earth:'Water',Water:'Fire',Fire:'Metal',Metal:'Wood'};
+    const emo={Wood:'🌳',Fire:'🔥',Earth:'🧱',Metal:'⚔️',Water:'💧'};
+    function playSound(id) {
+  const src = document.getElementById(id).src;
+  new Audio(src).play();
+}
+
+
+    const computerZone=document.getElementById('computerZone');
+    const playerZone=document.getElementById('playerZone');
+    const roundLog=document.getElementById('roundLog');
+    const battleZone=document.getElementById('battleZone');
+    const startBtn=document.getElementById('startBtn');
+
+    let playerDeck=[],cpuDeck=[],pWin=0,cWin=0,round=1,rollover=1;
+
+    const rand=()=>elements[Math.floor(Math.random()*elements.length)];
+    const imgPath=c=>`img/${c.grade.toLowerCase()}_${c.element.toLowerCase()}.png`;
+
+    function createDeck(){return [...grades].reverse().map(g=>({grade:g,element:rand(),used:false}));}
+
+    function cardHTML(card,dim=true,idx=null){
+      const used=(dim&&card.used)?' used':'';
+      const click=idx!==null?` onclick="selectCard(${idx})"`:'';
+      return `<div class="card card-${card.grade.toLowerCase()} img${used}"${click}>
+                <img src="${imgPath(card)}" alt="${card.grade}"
+                     onerror="(function(el){const p=el.parentNode;p.classList.remove('img');p.innerHTML='<strong>${card.grade}</strong><br>${card.element} ${emo[card.element]}';})(this)">
+              </div>`;
+    }
+
+    function render(){
+      computerZone.innerHTML=cpuDeck.map(c=>cardHTML(c,true)).join('');
+      playerZone.innerHTML=playerDeck.map((c,i)=>cardHTML(c,true,c.used?null:i)).join('');
+    }
+
+    function placeholders(){
+      const ph='<div class="card placeholder">CARD</div>'.repeat(5);
+      computerZone.innerHTML=ph;
+      playerZone.innerHTML=ph;
+    }
+
+    function compare(a,b){
+      const ai=grades.indexOf(a.grade),bi=grades.indexOf(b.grade);
+      if(a.element===b.element) return ai<bi?'A':ai>bi?'B':'Draw';
+      const aB=beats[a.element]===b.element,bB=beats[b.element]===a.element,d=Math.abs(ai-bi);
+      if(aB||bB){if(d>=3) return ai<bi?'A':'B'; return aB?'A':'B';}
+      return ai<bi?'A':ai>bi?'B':'Draw';
+    }
+
+    function log(t){roundLog.insertAdjacentHTML('beforeend',`<li>${t}</li>`);}
+
+    function showBattle(p,c,t){
+      battleZone.innerHTML=`<div class="battle-row">${cardHTML(p,false)}<div class="battle-result-center">⚔️ ${t} ⚔️</div>${cardHTML(c,false)}</div>`;
+    }
+
+    function showFinal(){
+      const r=pWin>cWin?'🎉 플레이어 승리!':pWin<cWin?'💀 컴퓨터 승리!':'🤝 무승부!';
+      log('――――――――――――'); log('최종 결과 : '+r);
+      if(pWin > cWin) playSound('sfx-win');
+  else if(pWin < cWin) playSound('sfx-lose');
+  else playSound('sfx-draw');
+
+      battleZone.insertAdjacentHTML('beforeend',`
+        <div class="final-result-overlay">
+          <div class="final-result-box">${r}</div>
+        </div>`);
+    }
+
+    function selectCPUCard(){
+      const avail=cpuDeck.filter(v=>!v.used);
+      return avail[Math.floor(Math.random()*avail.length)];
+    }
+
+    function selectCard(i){
+      const p=playerDeck[i]; if(p.used) return;
+      playSound('sfx-select');
+
+      const c=selectCPUCard(); p.used=c.used=true;
+      const r=compare(p,c);
+      let txt=r==='A'?'플레이어 승':r==='B'?'컴퓨터 승':'무승부';
+      if(r==='Draw') rollover++;
+      else{ if(r==='A') pWin+=rollover; if(r==='B') cWin+=rollover;
+            if(rollover>1) txt+=` (${rollover}점)`; rollover=1; }
+      showBattle(p,c,txt); log(`${round}라운드 : ${txt}`); round++;
+      setTimeout(()=>{render(); if(round>5||pWin>=3||cWin>=3) showFinal();},700);
+    }
+
+    function startGame(){
+      playerDeck=createDeck(); cpuDeck=createDeck();
+      pWin=cWin=0; round=1; rollover=1;
+      roundLog.innerHTML='';
+      battleZone.innerHTML='<em style="color:gray;">전투 결과가 여기에 표시됩니다</em>';
+      render();
+    }
+
+    document.addEventListener('DOMContentLoaded',()=>{
+      placeholders();
+      startBtn.addEventListener('click',startGame);
+    });
+  </script>
+</body>
+</html>
