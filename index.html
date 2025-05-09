@@ -92,6 +92,11 @@
 </style>
 </head>
 <body>
+  <audio id="sfx-select" src="sounds/select.mp3" preload="auto"></audio>
+  <audio id="sfx-win" src="sounds/win.mp3" preload="auto"></audio>
+  <audio id="sfx-lose" src="sounds/lose.mp3" preload="auto"></audio>
+  <audio id="sfx-draw" src="sounds/draw.mp3" preload="auto"></audio>
+
 <div id="headerRow"><h1>비트모빅 TCG</h1><button id="startBtn">게임 시작</button></div>
 
 <h3 style="text-align:center;margin:0 0 6px;">컴퓨터</h3>
@@ -129,6 +134,12 @@ const grades=['Ancient','Legendary','Epic','Rare','Common'];
 const elements=['Wood','Fire','Earth','Metal','Water'];
 const beats={Wood:'Earth',Earth:'Water',Water:'Fire',Fire:'Metal',Metal:'Wood'};
 const emo={Wood:'🌳',Fire:'🔥',Earth:'🧱',Metal:'⚔️',Water:'💧'};
+
+function playSound(id) {
+  const src = document.getElementById(id).src;
+  new Audio(src).play();
+}
+
 
 const computerZone=document.getElementById('computerZone');
 const playerZone=document.getElementById('playerZone');
@@ -174,6 +185,11 @@ function showBattle(p,c,t){
 function showFinal(){
   const r=pWin>cWin?'🎉 플레이어 승리!':pWin<cWin?'💀 컴퓨터 승리!':'🤝 무승부!';
   log('――――――――――――'); log('최종 결과 : '+r);
+  
+  if(pWin > cWin) playSound('sfx-win');
+else if(pWin < cWin) playSound('sfx-lose');
+else playSound('sfx-draw');
+
   battleZone.insertAdjacentHTML('beforeend',`<div class="final-result-overlay"><h2>${r}</h2></div>`);
 }
 
@@ -184,6 +200,7 @@ function selectCPUCard(){
 
 function selectCard(i){
   const p=playerDeck[i]; if(p.used) return;
+  playSound('sfx-select');
   const c=selectCPUCard(); p.used=c.used=true;
   const r=compare(p,c);
   let txt=r==='A'?'플레이어 승':r==='B'?'컴퓨터 승':'무승부';
